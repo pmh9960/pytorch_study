@@ -18,6 +18,8 @@ import matplotlib.pyplot as plt
 import matplotlib.animation as animation
 from IPython.display import HTML
 
+from debug_utils import _ns
+
 
 def run():
     # -*- coding: utf-8 -*-
@@ -177,7 +179,12 @@ def run():
     #
 
     # Root directory for dataset
-    dataroot = "data/celeba"
+    dataroot = os.path.join(
+        "C:\\Users", "Minho", "Documents", "2021_W", "data", "celeba"
+    )  # ImageFolder
+    # dataroot = os.path.join(
+    #     "C:\\Users", "Minho", "Documents", "2021_W", "data"
+    # )  # CelebA
 
     # Number of workers for dataloader
     workers = 2
@@ -257,6 +264,17 @@ def run():
             ]
         ),
     )
+    # dataset = dset.CelebA(
+    #     root=dataroot,
+    #     transform=transforms.Compose(
+    #         [
+    #             transforms.Resize(image_size),
+    #             transforms.CenterCrop(image_size),
+    #             transforms.ToTensor(),
+    #             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+    #         ]
+    #     ),
+    # )
     # Create the dataloader
     dataloader = torch.utils.data.DataLoader(
         dataset, batch_size=batch_size, shuffle=True, num_workers=workers
@@ -267,19 +285,20 @@ def run():
         "cuda:0" if (torch.cuda.is_available() and ngpu > 0) else "cpu"
     )
 
-    # Plot some training images
-    real_batch = next(iter(dataloader))
-    plt.figure(figsize=(8, 8))
-    plt.axis("off")
-    plt.title("Training Images")
-    plt.imshow(
-        np.transpose(
-            vutils.make_grid(
-                real_batch[0].to(device)[:64], padding=2, normalize=True
-            ).cpu(),
-            (1, 2, 0),
-        )
-    )
+    # # Plot some training images
+    # real_batch = next(iter(dataloader))
+    # plt.figure(figsize=(8, 8))
+    # plt.axis("off")
+    # plt.title("Training Images")
+    # plt.imshow(
+    #     np.transpose(
+    #         vutils.make_grid(
+    #             real_batch[0].to(device)[:64], padding=2, normalize=True
+    #         ).cpu(),
+    #         (1, 2, 0),
+    #     )
+    # )
+    # plt.show()
 
     ######################################################################
     # Implementation
@@ -348,19 +367,19 @@ def run():
                 # input is Z, going into a convolution
                 nn.ConvTranspose2d(nz, ngf * 8, 4, 1, 0, bias=False),
                 nn.BatchNorm2d(ngf * 8),
-                nn.ReLU(True),
+                nn.ReLU(),
                 # state size. (ngf*8) x 4 x 4
                 nn.ConvTranspose2d(ngf * 8, ngf * 4, 4, 2, 1, bias=False),
                 nn.BatchNorm2d(ngf * 4),
-                nn.ReLU(True),
+                nn.ReLU(),
                 # state size. (ngf*4) x 8 x 8
                 nn.ConvTranspose2d(ngf * 4, ngf * 2, 4, 2, 1, bias=False),
                 nn.BatchNorm2d(ngf * 2),
-                nn.ReLU(True),
+                nn.ReLU(),
                 # state size. (ngf*2) x 16 x 16
                 nn.ConvTranspose2d(ngf * 2, ngf, 4, 2, 1, bias=False),
                 nn.BatchNorm2d(ngf),
-                nn.ReLU(True),
+                nn.ReLU(),
                 # state size. (ngf) x 32 x 32
                 nn.ConvTranspose2d(ngf, nc, 4, 2, 1, bias=False),
                 nn.Tanh()
@@ -419,19 +438,19 @@ def run():
             self.main = nn.Sequential(
                 # input is (nc) x 64 x 64
                 nn.Conv2d(nc, ndf, 4, 2, 1, bias=False),
-                nn.LeakyReLU(0.2, inplace=True),
+                nn.LeakyReLU(0.2),
                 # state size. (ndf) x 32 x 32
                 nn.Conv2d(ndf, ndf * 2, 4, 2, 1, bias=False),
                 nn.BatchNorm2d(ndf * 2),
-                nn.LeakyReLU(0.2, inplace=True),
+                nn.LeakyReLU(0.2),
                 # state size. (ndf*2) x 16 x 16
                 nn.Conv2d(ndf * 2, ndf * 4, 4, 2, 1, bias=False),
                 nn.BatchNorm2d(ndf * 4),
-                nn.LeakyReLU(0.2, inplace=True),
+                nn.LeakyReLU(0.2),
                 # state size. (ndf*4) x 8 x 8
                 nn.Conv2d(ndf * 4, ndf * 8, 4, 2, 1, bias=False),
                 nn.BatchNorm2d(ndf * 8),
-                nn.LeakyReLU(0.2, inplace=True),
+                nn.LeakyReLU(0.2),
                 # state size. (ndf*8) x 4 x 4
                 nn.Conv2d(ndf * 8, 1, 4, 1, 0, bias=False),
                 nn.Sigmoid(),
@@ -588,12 +607,12 @@ def run():
     for epoch in range(num_epochs):
         # For each batch in the dataloader
         for i, data in enumerate(dataloader, 0):
-
             ############################
             # (1) Update D network: maximize log(D(x)) + log(1 - D(G(z)))
             ###########################
             ## Train with all-real batch
-            netD.zero_grad()
+            netD.zero_grad()  # zero_grad를 하지 않으면 기존 grad에 새로 구한 grad를 더해줌.
+            # Pytorch tips :    zero_grad(set_to_none=True)하면 메모리 관점에서 더 효율적.
             # Format batch
             real_cpu = data[0].to(device)
             b_size = real_cpu.size(0)
@@ -606,21 +625,51 @@ def run():
             errD_real.backward()
             D_x = output.mean().item()
 
+            # Pytorch study (1/4)
+            # Deallocation real_cpu, output
+            # : This is important when each tensor is big. (high resolution image, video ...)
+            del real_cpu, output
+
             ## Train with all-fake batch
             # Generate batch of latent vectors
             noise = torch.randn(b_size, nz, 1, 1, device=device)
-            # Generate fake image batch with G
-            fake = netG(noise)
+
+            # Pytorch study (1/4)
+            # We don't need netG's backward CG
+            # (because we want to update netG's params in this section)
+
+            # # 1. Use detach
+            # # Generate fake image batch with G
+            # fake = netG(noise)
+            # label.fill_(fake_label)
+            # # Classify all fake batch with D
+            # output = netD(fake.detach()).view(-1)
+
+            # 2. Use torch.no_grad
             label.fill_(fake_label)
-            # Classify all fake batch with D
-            output = netD(fake.detach()).view(-1)
+            with torch.no_grad():
+                fake = netG(noise)
+            output = netD(fake).reshape(-1)
+
             # Calculate D's loss on the all-fake batch
             errD_fake = criterion(output, label)
             # Calculate the gradients for this batch
             errD_fake.backward()
             D_G_z1 = output.mean().item()
+
             # Add the gradients from the all-real and all-fake batches
+
+            # Pytorch study (1/4)
+            # # The original way
+            # errD = errD_real + errD_fake
+            # # This approach makes USELESS CG. (Making CG is EXPENSIVE)
+
+            # Modified Code
+            # Below code help to detach CG of errD_real, errD_fake either.
+            errD_real = errD_real.item()
+            errD_fake = errD_fake.item()
             errD = errD_real + errD_fake
+
             # Update D
             optimizerD.step()
 
@@ -648,7 +697,7 @@ def run():
                         num_epochs,
                         i,
                         len(dataloader),
-                        errD.item(),
+                        errD,
                         errG.item(),
                         D_x,
                         D_G_z1,
@@ -658,7 +707,7 @@ def run():
 
             # Save Losses for plotting later
             G_losses.append(errG.item())
-            D_losses.append(errD.item())
+            D_losses.append(errD)
 
             # Check how the generator is doing by saving G's output on fixed_noise
             if (iters % 500 == 0) or (

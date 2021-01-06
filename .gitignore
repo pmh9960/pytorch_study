@@ -208,3 +208,4 @@ $RECYCLE.BIN/
 # End of https://www.toptal.com/developers/gitignore/api/python,vscode,windows,macos
 
 *.bat
+video\ lectures/
