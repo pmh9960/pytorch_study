@@ -1,0 +1,5 @@
+모델 경량화
+
+Pruning / Quantization / Distillation
+
+https://blog.pingpong.us/ml-model-optimize/
