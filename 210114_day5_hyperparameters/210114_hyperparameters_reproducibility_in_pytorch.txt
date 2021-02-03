@@ -1,0 +1,2 @@
+It is available on Goodnotes.
+210114_hyperparameters_reproducibility_in_pytorch.pdf
