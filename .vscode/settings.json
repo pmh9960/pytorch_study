@@ -1,4 +1,5 @@
 {
-  "python.pythonPath": "d:\\anaconda3\\envs\\ps_36\\python.exe",
-  "jupyter.jupyterServerType": "local"
+  "python.pythonPath": ".venv\\python.exe",
+  "jupyter.jupyterServerType": "local",
+  "python.formatting.provider": "black"
 }
